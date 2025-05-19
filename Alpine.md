@@ -186,17 +186,17 @@ Command successful.
 `pvcreate /dev/mapper/mim`
 
 `vgcreate mim0 /dev/mapper/mim`
-
-`lvcreate -L 20G mim0 -n swap`
-`lvcreate -L 1G mim0 -n boot`
-`lvcreate -L 10G mim0 -n var`
-`lvcreate -L 12G mim0 -n var-log`
-`lvcreate -L 10G mim0 -n var-log-audit`
-`lvcreate -L 8G mim0 -n var-tmp`
-`lvcreate -L 8G mim0 -n tmp`
-`lvcreate -L 10G mim0 -n home`
-`lvcreate -l 100%FREE mim0 -n root`
-
+```
+lvcreate -L 20G mim0 -n swap
+lvcreate -L 1G mim0 -n boot
+lvcreate -L 10G mim0 -n var
+lvcreate -L 12G mim0 -n var-log
+lvcreate -L 10G mim0 -n var-log-audit
+lvcreate -L 8G mim0 -n var-tmp
+lvcreate -L 8G mim0 -n tmp
+lvcreate -L 10G mim0 -n home
+lvcreate -l 100%FREE mim0 -n root
+```
 ## Docker Device
 `pvcreate /dev/mapper/ath`
 
@@ -216,15 +216,15 @@ Command successful.
 
 ## Root Device
 `btrfs rescue create-control-device`
-
-`mkfs.btrfs /dev/mim0/var`
-`mkfs.btrfs /dev/mim0/var-log`
-`mkfs.btrfs /dev/mim0/var-log-audit`
-`mkfs.btrfs /dev/mim0/var-tmp`
-`mkfs.btrfs /dev/mim0/tmp`
-`mkfs.btrfs /dev/mim0/home`
-`mkfs.btrfs /dev/mim0/root`
-
+```
+mkfs.btrfs /dev/mim0/var
+mkfs.btrfs /dev/mim0/var-log
+mkfs.btrfs /dev/mim0/var-log-audit
+mkfs.btrfs /dev/mim0/var-tmp
+mkfs.btrfs /dev/mim0/tmp
+mkfs.btrfs /dev/mim0/home
+mkfs.btrfs /dev/mim0/root
+```
 `mkswap /dev/mim0/swap`
 
 ## Docker Device
@@ -236,15 +236,15 @@ Command successful.
 `mount -t btrfs -o noatime,discard=async,compress=zstd:3 /dev/mim0/root /mnt`
 
 `cd /mnt`
-
-`btrfs su cr @`
-`btrfs su cr @var`
-`btrfs su cr @var-log`
-`btrfs su cr @var-log-audit`
-`btrfs su cr @var-tmp`
-`btrfs su cr @tmp`
-`btrfs su cr @home`
-
+```
+btrfs su cr @
+btrfs su cr @var
+btrfs su cr @var-log
+btrfs su cr @var-log-audit
+btrfs su cr @var-tmp
+btrfs su cr @tmp
+btrfs su cr @home
+```
 `cd /`
 
 `umount /mnt`
@@ -264,29 +264,34 @@ Command successful.
 `mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@ /dev/mim0/root /mnt`
 
 `cd /mnt`
-
-`mkdir -p /mnt/boot`
-`mkdir -p /mnt/var`
-`mkdir -p /mnt/tmp`
-`mkdir -p /mnt/home`
-
-`mount -t ext4 /dev/mim0/boot /mnt/boot`
-`mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var /dev/mim0/var /mnt/var`
-`mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@tmp /dev/mim0/tmp /mnt/tmp`
-`mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@home /dev/mim0/home /mnt/home`
-
-`mkdir -p /mnt/boot/efi`
-`mkdir -p /mnt/var/log`
-`mkdir -p /mnt/var/tmp`
-
-`mount -t vfat /dev/sdX1 /mnt/boot/efi`
-`mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-log /dev/mim0/var-log /mnt/var/log`
-`mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-tmp /dev/mim0/var-tmp /mnt/var/tmp`
-
-`mkdir -p /mnt/var/log/audit`
-`mkdir -p /mnt/var/lib/docker`
-
-`mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-log-audit /dev/mim0/var-log-audit /mnt/var/log/audit`
-`mount -t btrfs -o noatime,nodatacow`,discard=async,compress=zstd:3,subvolume=@docker /dev/ath0/docker /mnt/var/lib/docker`
-
+```
+mkdir -p /mnt/boot
+mkdir -p /mnt/var
+mkdir -p /mnt/tmp
+mkdir -p /mnt/home
+```
+```
+mount -t ext4 /dev/mim0/boot /mnt/boot`
+mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var /dev/mim0/var /mnt/var
+mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@tmp /dev/mim0/tmp /mnt/tmp
+mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@home /dev/mim0/home /mnt/home
+```
+```
+mkdir -p /mnt/boot/efi
+mkdir -p /mnt/var/log
+mkdir -p /mnt/var/tmp
+```
+```
+mount -t vfat /dev/sdX1 /mnt/boot/efi
+mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-log /dev/mim0/var-log /mnt/var/log
+mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-tmp /dev/mim0/var-tmp /mnt/var/tmp
+```
+```
+mkdir -p /mnt/var/log/audit
+mkdir -p /mnt/var/lib/docker
+```
+```
+mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-log-audit /dev/mim0/var-log-audit /mnt/var/log/audit
+mount -t btrfs -o noatime,nodatacow`,discard=async,compress=zstd:3,subvolume=@docker /dev/ath0/docker /mnt/var/lib/docker
+```
 `swapon /dev/mim0/swap`
