@@ -1,5 +1,5 @@
 # Alpine
-Documenting my process of learning how to set up a secure NextCloud server on Alpine Linux
+Documenting my process of learning how to set up a secure NextCloud server on Alpine Linux.  I'll be adding to this a little at a time as figure out the steps and I'm sure there will be a lot of changes and corrections as I find what works...and what doesn't.
 ## Wishlist
 - Logical Volume Manager
 - LUKS2 Full-Disk Encryption
