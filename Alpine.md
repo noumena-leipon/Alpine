@@ -212,7 +212,7 @@ lvcreate -l 100%FREE mim0 -n root
 `mkfs.vfat /dev/sdX1`
 
 ## ExFAT Storage Partition
-`mkfs.vfat /dev/sdX4`
+`mkfs.exfat /dev/sdX4`
 
 ## Boot
 `mkfs.ext4 /dev/mim0/boot`
