@@ -10,29 +10,30 @@ Uncomment community respository
 `apk add lvm2 cryptsetup e2fsprogs btrfs-progs exfatprogs gptfdisk mkinitfs grub grub-efi efibootmgr`
 
 # Partion Devices
+```
 ╔══════════════════════════════╦═══════════════════════╗
-║ /dev/sdX1										 ║	EFI System Partition ║
-║ /dev/sdX2										 ║	Unassigned					 ║
-║ /dev/sdX3										 ║	Unassigned					 ║
-║ /dev/sdX4										 ║	ExFAT Storage Space	 ║
+║ /dev/sdX1                    ║  EFI System Partition ║
+║ /dev/sdX2                    ║  Unassigned           ║
+║ /dev/sdX3                    ║  Unassigned           ║
+║ /dev/sdX4                    ║  ExFAT Storage Space  ║
 ╠══════════════════════════════╬═══════════════════════╣
-║ /dev/sdY1										 ║	LUKS2 Container			 ║
-║ 	└/dev/mapper/mim					 ║	LVM Container				 ║
-║ 		├/dev/mim0/boot					 ║	/boot								 ║
-║ 		├/dev/mim0/swap					 ║	/swap								 ║
-║ 		├/dev/mim0/root					 ║	/										 ║
-║ 		├/dev/mim0/home					 ║	/home								 ║
-║ 		├/dev/mim0/var					 ║	/var								 ║
-║ 		├/dev/mim0/var-log			 ║	/var/log						 ║
-║ 		├/dev/mim0/var-log-audit ║	/var/log/audit			 ║
-║ 		├/dev/mim0/var-tmp			 ║	/var/tmp						 ║
-║ 		└/dev/mim0/tmp					 ║	/tmp								 ║
+║ /dev/sdY1                    ║  LUKS2 Container      ║
+║   └/dev/mapper/mim           ║  LVM Container        ║
+║     ├/dev/mim0/root          ║  /                    ║
+║     ├/dev/mim0/boot          ║  /boot                ║
+║     ├/dev/mim0/swap          ║  /swap                ║
+║     ├/dev/mim0/home          ║  /home                ║
+║     ├/dev/mim0/var           ║  /var                 ║
+║     ├/dev/mim0/var-log       ║  /var/log             ║
+║     ├/dev/mim0/var-log-audit ║  /var/log/audit       ║
+║     ├/dev/mim0/var-tmp       ║  /var/tmp             ║
+║     └/dev/mim0/tmp           ║  /tmp                 ║
 ╠══════════════════════════════╬═══════════════════════╣
-║ /dev/sdZ1										 ║	LUKS2 Container			 ║
-║ 	└/dev/mapper/ath					 ║	LVM Container				 ║
-║ 		└/dev/ath0/docker				 ║	/var/lib/docker			 ║
+║ /dev/sdZ1                    ║  LUKS2 Container      ║
+║   └/dev/mapper/ath           ║  LVM Container        ║
+║     └/dev/ath0/docker        ║  /var/lib/docker      ║
 ╚══════════════════════════════╩═══════════════════════╝
-
+```
 ## USB Boot Device
 ```gdisk /dev/sdX
 GPT fdisk (gdisk) version 1.0.5
