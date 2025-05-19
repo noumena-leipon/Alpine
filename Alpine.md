@@ -7,7 +7,7 @@ Use "none" for disk steps
 Uncomment community respository
 
 # Install Setup Packages
-`apk add lvm2 cryptsetup e2fsprogs btrfs-progs exfatprogs gptfdisk mkinitfs grub grub-efi efibootmgr`
+`apk add lvm2 cryptsetup e2fsprogs btrfs-progs exfatprogs gptfdisk mkinitfs`
 
 # Partion Devices
 ```
@@ -204,6 +204,9 @@ lvcreate -l 100%FREE mim0 -n root
 
 `lvcreate -l 100%FREE ath0 -n docker`
 
+## Rescan Devices
+`mdev -s`
+
 # Create Filesystems
 ## EFI System Partition
 `mkfs.vfat /dev/sdX1`
@@ -295,3 +298,129 @@ mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-log-audit
 mount -t btrfs -o noatime,nodatacow`,discard=async,compress=zstd:3,subvolume=@docker /dev/ath0/docker /mnt/var/lib/docker
 ```
 `swapon /dev/mim0/swap`
+
+# Install Alpine
+`setup-disk -m sys /mnt/`
+
+# Add swap to fstab
+`vi /mnt/etc/fstab`
+
+Add the following and confirm previoulsy set mounting options:
+`/dev/mim0/swap	swap	swap	defaults	0 0`
+
+# Edit mkinitfs.conf
+Check output of mkinitfs -L to determine features necessary for system boot.
+
+Add `cryptsetup, cryptkey,usb,lvm,ext4,btrfs,nvme`.
+
+## Rebuild Initial RAM Disk
+mkinitfs -c /mnt/etc/mkinitfs/mkinitfs.conf -b /mnt/ $(ls /mnt/lib/modules/)
+
+# Install and Configure the Bootloader
+Get the Root Device UUID
+`blkid -s UUID -o value /dev/sdY1`
+
+## Create Keyfiles to Unlock Partitions on Boot
+### Root Device
+`touch /mnt/boot/mim.bin`
+
+`chmod 600 /mnt/boot/mim.bin`
+
+`dd bs=512 count=4 if=/dev/urandom of=/mnt/boot/mim.bin`
+
+`cryptsetup luksAddKey /dev/sdY1 /mnt/boot/mim.bin`
+
+### Docker Device
+`touch /mnt/boot/ath.bin`
+
+`chmod 600 /mnt/boot/ath.bin`
+
+`dd bs=512 count=4 if=/dev/urandom of=/mnt/boot/ath.bin`
+
+`cryptsetup luksAddKey /dev/sdZ1 /mnt/boot/ath.bin`
+
+#### Add Keyfile Unlocking for Docker Device
+`vi /etc/conf.d/dmcrypt`
+
+Add the following:
+```
+target=crypt-docker
+source='/dev/sdZ1'
+key='/root/boot/ath.bin'
+```
+Enable `dmcrypt` and `lvm` services to boot process:
+```
+rc-update add dmcrypt boot
+rc-update add lvm boot
+```
+
+## Mount Filesystems for Grub EFI Installer
+```
+mount -t proc /proc /mnt/proc
+mount --rbind /dev /mnt/dev
+mount --make-rslave /mnt/dev
+mount --rbind /sys /mnt/sys
+```
+
+## Chroot Into the Installation 
+```
+chroot /mnt
+source /etc/profile
+export PS1="(chroot) $PS1"
+```
+
+## Install Grub2 for EFI
+`apk add grub grub-efi efibootmgr`
+
+## Configure Grub
+`vi /etc/default/grub`
+
+Add the following to GRUB_CMDLINE_LINUX_DEFAULT
+`cryptroot=UUID=<UUID of /dev/sdY1> cryptdm=mim cryptkey`
+
+Add the following lines:
+```
+GRUB_PRELOAD_MODULES="luks cryptodisk part_gpt lvm"
+GRUB_ENABLE_CRYPTODISK=y
+```
+
+## Create a Pre-Config Grub File
+`touch /root/grub-pre.cfg`
+
+`vi /root/grub-pre.cfg`
+```
+set crypto_uuid=<UUID of sdY1 without hyphens>
+cryptomount -u $crypto_uuid
+set root='lvmid/<UUID of mim0 Volume Group from vgdisplay>/<UUID of mim0 Logical Volume from lgdisplay>'
+set prefix=($root)/boot/grub
+insmod normal
+normal
+```
+```
+grub-mkimage -p /boot/grub -O x86_64-efi -c /root/grub-pre.cfg -o /tmp/grubx64.efi luks2 part_gpt cryptodisk lvm ext2 gcry_rijndael pbkdf2 gcry_sha512
+install -v /tmp/grubx64.efi /boot/efi/EFI/grub/
+grub-mkconfig -o /boot/grub/grub.cfg
+exit
+```
+
+#Reboot
+```
+cd
+umount -l /mnt/dev
+umount -l /mnt/proc
+umount -l /mnt/sys
+umount /mnt/boot/efi
+umount /mnt/boot
+umount /mnt/var/log/audit
+umount /mnt/var/log
+umount /mnt/var/lib/docker
+umount /mnt/var/tmp
+umount /mnt/var
+umount /mnt/tmp
+umount /mnt/home
+swapoff /dev/mim0/swap
+umount /mnt
+vgchange -a n
+cryptsetup luksClose lvmcrypt
+reboot
+```
