@@ -482,8 +482,9 @@ exit
 ## Check UFW status and rules
 `ufw status verbose`
 
-#Reboot
-##Unmount Volumes and Partitions
+# Reboot
+
+## Unmount Volumes and Partitions
 ```
 cd
 umount -l /mnt/dev
