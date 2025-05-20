@@ -4,7 +4,7 @@ Use "none" for disk steps
 
 # Add Community Repository
 `vi /etc/apk/repositories`
-Uncomment community respository
+Uncomment community respository, edit repository addresses to https
 
 # Install Setup Packages
 `apk add lvm2 cryptsetup e2fsprogs btrfs-progs exfatprogs gptfdisk mkinitfs`
@@ -151,7 +151,7 @@ The operation has completed successfully.
 Devices that have not encrypted previously should be prepared according to type (`blkdiscard` for SSD and NVME devices or random fill for HDD devices).
 
 ## Root Device
-```cryptsetup -v -c aes-xts-plain64 -s 512 --hash sha512 --pbkdf pbkdf2 --iter-time 15000 --use-random luksFormat /dev/sdY
+```cryptsetup -v -c aes-xts-plain64 -s 512 --hash sha512 --pbkdf pbkdf2 --iter-time 15000 --use-random --allow-discards --persistent luksFormat /dev/sdY
 
 WARNING!
 ========
@@ -166,7 +166,7 @@ Command successful.
 `cryptsetup luksOpen /dev/sdY mim`
 
 ## Docker Device
-```cryptsetup -v -c aes-xts-plain64 -s 512 --hash sha512 --pbkdf pbkdf2 --iter-time 15000 --use-random luksFormat /dev/sdZ
+```cryptsetup -v -c aes-xts-plain64 -s 512 --hash sha512 --pbkdf pbkdf2 --iter-time 15000 --use-random --allow-discards --persistent luksFormat /dev/sdZ
 
 WARNING!
 ========
@@ -212,7 +212,7 @@ lvcreate -l 100%FREE mim0 -n root
 `mkfs.vfat /dev/sdX1`
 
 ## ExFAT Storage Partition
-`mkfs.exfat /dev/sdX4`
+`mkfs.vfat /dev/sdX4`
 
 ## Boot
 `mkfs.ext4 /dev/mim0/boot`
@@ -276,8 +276,8 @@ mkdir -p /mnt/home
 ```
 mount -t ext4 /dev/mim0/boot /mnt/boot`
 mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var /dev/mim0/var /mnt/var
-mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@tmp /dev/mim0/tmp /mnt/tmp
-mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@home /dev/mim0/home /mnt/home
+mount -t btrfs -o noatime,discard=async,nodev,nosuid,noexec,compress=zstd:3,subvolume=@tmp /dev/mim0/tmp /mnt/tmp
+mount -t btrfs -o noatime,discard=async,nodev,compress=zstd:3,subvolume=@home /dev/mim0/home /mnt/home
 ```
 ```
 mkdir -p /mnt/boot/efi
@@ -286,15 +286,15 @@ mkdir -p /mnt/var/tmp
 ```
 ```
 mount -t vfat /dev/sdX1 /mnt/boot/efi
-mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-log /dev/mim0/var-log /mnt/var/log
-mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-tmp /dev/mim0/var-tmp /mnt/var/tmp
+mount -t btrfs -o noatime,discard=async,nodev,nosuid,compress=zstd:3,subvolume=@var-log /dev/mim0/var-log /mnt/var/log
+mount -t btrfs -o noatime,discard=async,nodev,nosuid,noexec,compress=zstd:3,subvolume=@var-tmp /dev/mim0/var-tmp /mnt/var/tmp
 ```
 ```
 mkdir -p /mnt/var/log/audit
 mkdir -p /mnt/var/lib/docker
 ```
 ```
-mount -t btrfs -o noatime,discard=async,compress=zstd:3,subvolume=@var-log-audit /dev/mim0/var-log-audit /mnt/var/log/audit
+mount -t btrfs -o noatime,discard=async,nodev,nosuid,compress=zstd:3,subvolume=@var-log-audit /dev/mim0/var-log-audit /mnt/var/log/audit
 mount -t btrfs -o noatime,nodatacow`,discard=async,compress=zstd:3,subvolume=@docker /dev/ath0/docker /mnt/var/lib/docker
 ```
 `swapon /dev/mim0/swap`
@@ -311,10 +311,62 @@ Add the following and confirm previoulsy set mounting options:
 # Edit mkinitfs.conf
 Check output of mkinitfs -L to determine features necessary for system boot.
 
-Add `cryptsetup, cryptkey,usb,lvm,ext4,btrfs,nvme`.
+Add `cryptsetup,cryptkey,usb,usbhid,lvm,ext4,btrfs,nvme,xhci_pci`.
 
 ## Rebuild Initial RAM Disk
 mkinitfs -c /mnt/etc/mkinitfs/mkinitfs.conf -b /mnt/ $(ls /mnt/lib/modules/)
+
+## Configure chrony to use NTS
+`vi /etc/chrony/chrony.conf`
+
+Add the following, replacing existing servers:
+```
+# /etc/chrony/chrony.conf - Secure, NTS-enabled, and hardened
+
+# Use only trusted NTS servers for secure time sync
+server ntppool1.time.nl iburst nts
+server ntppool2.time.nl iburst nts
+
+# Allow only localhost to query or control chronyd
+allow 127.0.0.1
+allow ::1
+deny all
+
+cmdallow 127.0.0.1
+cmdallow ::1
+cmddeny all
+
+# Driftfile for tracking clock drift
+driftfile /var/lib/chrony/chrony.drift
+
+# Log only important events
+log tracking measurements statistics
+
+# Restrict access to the chrony control socket (default)
+unixcmd
+
+# Synchronize the RTC with system clock after stepping
+rtcsync
+
+# Harden kernel time discipline parameters
+maxupdateskew 100.0
+makestep 1.0 3
+
+# Drop root privileges after startup (chrony runs as chrony user by default)
+#user chrony
+
+# Optional: Uncomment if you want to ignore hardware timestamping
+#hwtimestamp *
+
+# Optional: Uncomment to further restrict logging from clients
+#noclientlog
+#noclientloglimit 0
+
+# End of file
+```
+`chown root:root /etc/chrony/chrony.conf`
+
+`chmod 600 /etc/chrony/chrony.conf`
 
 # Install and Configure the Bootloader
 Get the Root Device UUID
@@ -403,7 +455,35 @@ grub-mkconfig -o /boot/grub/grub.cfg
 exit
 ```
 
+# Install and Configure UFW
+## Install UFW (Uncomplicated Firewall)
+`apk add ufw`
+
+## Set default policies: deny all incoming, allow all outgoing
+`ufw default deny incoming`
+`ufw default allow outgoing`
+
+## Allow SSH (replace 22 with your custom port if changed)
+`ufw allow 22/tcp`
+
+## (Optional) Restrict SSH to your admin IP only
+## `ufw allow from <your-admin-ip>/32 to any port 22 proto tcp`
+
+## Allow HTTP and HTTPS for NextCloud
+`ufw allow 80/tcp`
+`ufw allow 443/tcp`
+
+## Enable logging (recommended: 'low' for production servers)
+`ufw logging on`
+
+## Enable UFW (this will activate the firewall)
+`ufw enable`
+
+## Check UFW status and rules
+`ufw status verbose`
+
 #Reboot
+##Unmount Volumes and Partitions
 ```
 cd
 umount -l /mnt/dev
